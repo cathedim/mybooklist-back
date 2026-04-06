@@ -1,27 +1,28 @@
 from flask_openapi3 import OpenAPI, Info, Tag
-from flask import redirect, request
-from urllib.parse import unquote
+from flask import redirect
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import update
 
 from model import Session, Livro
 from schemas import *
 from flask_cors import CORS
 
-from typing import List
-
 info = Info(title="mybooklist API", version="1.0.0")
 app = OpenAPI(__name__, info=info)
 CORS(app)
 
-@app.get('/')
+tag_doc = Tag(name="Documentação")
+tag_livro = Tag(name="Livro")
+
+@app.get('/', tags=[tag_doc])
 def home():
     """Redireciona para o Swagger (Documentação)
     """
     return redirect('/openapi/swagger')
 
-@app.get("/listar_livros")
+@app.get("/listar_livros", 
+         tags=[tag_livro],
+         responses={"200": ListaLivrosSchema})
 def listar_livros():
     """Lista todos os livros cadastrados
     """
@@ -33,12 +34,14 @@ def listar_livros():
     except Exception as e:
         return "Erro ao listar livros.", 400
 
-@app.get("/buscar_livro")
-def buscar_livro():
+@app.get('/buscar_livro', 
+         tags=[tag_livro], 
+         responses={"200": ListaLivrosSchema})
+def buscar_livro(query: LivroNomeSchema):
     """Busca um livro a partir do seu nome
     """
     try:
-        nome = request.args.get("nome")
+        nome = query.nome
         session = Session()
         busca = session.query(Livro).filter(Livro.nome.ilike(f'%{nome}%')).all()
         
@@ -46,24 +49,23 @@ def buscar_livro():
     except Exception as e:
         return "Erro ao buscar livro.", 400
 
-@app.post("/adicionar_livro")
-def adicionar_livro():
+@app.post("/adicionar_livro", 
+         tags=[tag_livro])
+def adicionar_livro(form: LivroSchema):
     """Adiciona novo livro, recebendo nome, autor, ano de publicação e capa
-    """
-    dados_requisicao = request.get_json()
-
-    if not dados_requisicao['ano_publicacao'].isnumeric():
+    """    
+    if not str(form.ano_publicacao).isnumeric():
         return f"Erro: ano de publicação precisa ser um número!", 400
     
-    if (".jpg" not in dados_requisicao["capa"]) and (".png" not in dados_requisicao["capa"]) and (".jpeg" not in dados_requisicao["capa"]):
+    if (".jpg" not in form.capa) and (".png" not in form.capa) and (".jpeg" not in form.capa):
         return f"Erro: endereço de imagem para capa precisa terminar em '.jpg', '.png' ou '.jpeg'!", 401
-
-    livro = Livro(
-        nome=dados_requisicao["nome"],
-        autor=dados_requisicao["autor"],
-        ano_publicacao=dados_requisicao["ano_publicacao"],
-        capa=dados_requisicao["capa"])
     
+    livro = Livro(
+        nome=form.nome,
+        autor=form.autor,
+        ano_publicacao=form.ano_publicacao,
+        capa=form.capa)
+
     try:
         session = Session()
         session.add(livro)
@@ -80,11 +82,12 @@ def adicionar_livro():
     finally:
         session.close()
 
-@app.delete("/deletar_livro")
-def deletar_livro():
+@app.delete("/deletar_livro", 
+         tags=[tag_livro])
+def deletar_livro(form: LivroNomeSchema):
     """Deleta um livro a partir do seu nome
     """
-    nome = request.args.get("nome")
+    nome = form.nome
 
     try:
         session = Session()
