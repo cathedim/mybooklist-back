@@ -18,6 +18,22 @@ class LivroNomeSchema(BaseModel):
     nome: str
 
 
+class LivroAtualizacaoSchema(BaseModel):
+    """ Novos dados do livro para atualizar registro
+    """
+    nome_antigo: str
+    nome_novo: str
+    autor_novo: str
+    capa_nova: str
+    ano_publicacao_novo: int
+
+
+class LivroBuscaSchema(BaseModel):
+    """ Campo de busca avançada do livro
+    """
+    busca: str
+
+
 class ListaLivrosSchema(BaseModel):
     """ Lista de livros
     """

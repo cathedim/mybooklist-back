@@ -4,3 +4,4 @@ flask-openapi3
 SQLAlchemy
 SQLAlchemy-Utils
 flask-openapi3[swagger]
+requests
